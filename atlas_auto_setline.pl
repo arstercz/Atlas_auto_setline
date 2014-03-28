@@ -180,7 +180,7 @@ Specifies slave and atlas source configuration:
       slave_host:10.0.23.205
       slave_port:3306
       slave_user:root
-      slave_pass:a9vg_com-3306
+      slave_pass:xxxxxx
       atlas_host:10.0.23.201
       atlas_port:5011, 5012, 5013
       atlas_user:admin

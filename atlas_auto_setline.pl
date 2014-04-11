@@ -141,6 +141,7 @@ $conf = "./$conf" if $conf && $conf =~ /^[^\/]/;
 my $config   = Config::Auto::parse("$conf");
 my $port_ref = $config->{'atlas_port'};
 
+# add port_ref to array.
 my @port;
 if (ref($port_ref) eq "ARRAY") {
   foreach my $adminport (@$port_ref) {

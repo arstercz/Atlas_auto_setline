@@ -141,11 +141,20 @@ $conf = "./$conf" if $conf && $conf =~ /^[^\/]/;
 my $config   = Config::Auto::parse("$conf");
 my $port_ref = $config->{'atlas_port'};
 
+my @port;
+if (ref($port_ref) eq "ARRAY") {
+  foreach my $adminport (@$port_ref) {
+     push @port, $adminport;
+  }
+} else {
+  push @port, $port_ref;
+}
+
 mysql_setup;
 
 my $state = get_slave_status($config->{'slave_host'}, $config->{'slave_port'}, $config->{'slave_user'}, $config->{'slave_pass'});
 
-for my $atlas_port (@$port_ref) {
+for my $atlas_port (@port) {
       my $atlas_info = atlas_ends($config->{'atlas_host'}, $atlas_port, $config->{'atlas_user'}, $config->{'atlas_pass'}, $config->{'slave_host'});
       #set offline when slave has error but atlas is ok.
       if ( $state eq 'ERR' and $atlas_info->{$atlas_port}->{'port'} + 0 == $atlas_port and $atlas_info->{$atlas_port}->{'state'} eq 'up' and $atlas_info->{$atlas_port}->{'type'} eq 'ro') {

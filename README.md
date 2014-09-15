@@ -27,7 +27,7 @@ db.conf文件配置(单实例下的多个库)举例,:
 
 测试说明:
 关闭SQL_THREAD:
-=======================
+==============
 
     mysql> select * from backends;
     +-------------+-------------------+-------+------+
@@ -41,7 +41,7 @@ db.conf文件配置(单实例下的多个库)举例,:
     4 rows in set (0.00 sec)
 
 
-停止ip位16的slave的复制线程后(多个端口，多个offline操作):
+停止ip为16的slave的复制线程后(多个端口，多个offline操作):
 
     [root@tovm scripts]# perl atlas_auto_setline.pl --conf=db.conf --verbose --setline --threshold=30
      +---2014-04-15 11:53:01, 172.30.0.15, Slave_IO_Running: Yes, Slave_SQL_Running: Yes, Seconds_Behind_Master: 13
@@ -49,6 +49,7 @@ db.conf文件配置(单实例下的多个库)举例,:
      +-- 2014-04-15 11:53:01 OK SET offline node 172.30.0.16:5012
 
 atlas下线:
+
      mysql> select * from backends;
      +-------------+-------------------+-------+------+
      | backend_ndx | address           | state | type |

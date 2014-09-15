@@ -38,6 +38,7 @@ my $conf     = "db.conf";
 my $setline  = 0;
 my $verbose  = 0;
 my $version  = 0;
+my $threshold= 30;
 
 my $VER = '0.0.1';
 
@@ -47,6 +48,7 @@ GetOptions(
    "setline!"   => \$setline,
    "verbose!"   => \$verbose,
    "version!"   => \$version,
+   "threshold=i"=> \$threshold,
 );
 
 sub usage {
@@ -87,13 +89,15 @@ sub get_slave_status {
    }
 }
 
-# +-------------+------------------+-------+------+
-# | backend_ndx | address          | state | type |
-# +-------------+------------------+-------+------+
-# |           1 | 10.0.23.200:3306 | up    | rw   |
-# |           2 | 10.0.23.200:3306 | up    | ro   |
-# |           3 | 10.0.23.205:3306 | up    | ro   |
-# +-------------+------------------+-------+------+
+
+#+-------------+-------------------+-------+------+
+#| backend_ndx | address           | state | type |
+#+-------------+-------------------+-------+------+
+#|           1 | 172.30.0.153:3306 | up    | rw   |
+#|           2 | 172.30.0.153:3306 | up    | ro   |
+#|           3 | 172.30.0.154:3306 | up    | ro   |
+#|           4 | 172.30.0.133:3306 | up    | ro   |
+#+-------------+-------------------+-------+------+
 sub atlas_ends {
   my ($host, $port, $user,  $pass, $slave_host) = @_;
   my @atlas_state = `mysql -h $host -P $port -u$user -p$pass -Bse 'select * from backends'`;
@@ -110,21 +114,21 @@ sub atlas_ends {
 }
 
 sub atlas_setline {
-   my ($tag,$host, $port, $user, $pass, $id) = @_;
+   my ($tag,$slavehost, $atlashost, $port, $user, $pass, $id) = @_;
    my $cur_time    = strftime( "%Y-%m-%d %H:%M:%S", localtime(time) );
    eval {
      if ($tag eq 'offline') {
-        my @off = `mysql -h $host -P $port -u$user -p$pass -e "SET OFFLINE $id"`;
+        my @off = `mysql -h $atlashost -P $port -u$user -p$pass -e "SET OFFLINE $id"`;
      }
 
      if ($tag eq 'online') {
-        my @on  = `mysql -h $host -P $port -u$user -p$pass -e "SET ONLINE $id"`;
+        my @on  = `mysql -h $atlashost -P $port -u$user -p$pass -e "SET ONLINE $id"`;
      }
    };
    if ($@) {
      print " +-- $cur_time SET $tag ERR :$@\n"
    } else {
-     print " +-- $cur_time OK SET $tag node $host:$port\n" ;
+     print " +-- $cur_time OK SET $tag node $slavehost:$port\n" ;
    }
 }
 
@@ -140,8 +144,8 @@ if ($version) {
 $conf = "./$conf" if $conf && $conf =~ /^[^\/]/;
 my $config   = Config::Auto::parse("$conf");
 my $port_ref = $config->{'atlas_port'};
+my $host_ref = $config->{'slave_host'};
 
-# add port_ref to array.
 my @port;
 if (ref($port_ref) eq "ARRAY") {
   foreach my $adminport (@$port_ref) {
@@ -151,23 +155,33 @@ if (ref($port_ref) eq "ARRAY") {
   push @port, $port_ref;
 }
 
-mysql_setup;
-
-my $state = get_slave_status($config->{'slave_host'}, $config->{'slave_port'}, $config->{'slave_user'}, $config->{'slave_pass'});
-
-for my $atlas_port (@port) {
-      my $atlas_info = atlas_ends($config->{'atlas_host'}, $atlas_port, $config->{'atlas_user'}, $config->{'atlas_pass'}, $config->{'slave_host'});
-      #set offline when slave has error but atlas is ok.
-      if ( $state eq 'ERR' and $atlas_info->{$atlas_port}->{'port'} + 0 == $atlas_port and $atlas_info->{$atlas_port}->{'state'} eq 'up' and $atlas_info->{$atlas_port}->{'type'} eq 'ro') {
-         atlas_setline('offline', $config->{'atlas_host'}, $atlas_port, $config->{'atlas_user'}, $config->{'atlas_pass'}, $atlas_info->{$atlas_port}->{'id'}) if $setline;
-      }
-
-      #set online when slave is ok but atlas is error. 
-      if ( $state eq 'OK' and $atlas_info->{$atlas_port}->{'port'} + 0 == $atlas_port and $atlas_info->{$atlas_port}->{'state'} eq 'offline' and $atlas_info->{$atlas_port}->{'type'} eq 'ro')   {
-         atlas_setline('online', $config->{'atlas_host'}, $atlas_port, $config->{'atlas_user'}, $config->{'atlas_pass'}, $atlas_info->{$atlas_port}->{'id'}) if $setline;
-      }
+my @slave_host;
+if (ref($host_ref) eq "ARRAY") {
+   foreach my $host (@$host_ref) {
+     push @slave_host, $host;
+   }
+} else {
+     push @slave_host, $host_ref;
 }
 
+mysql_setup;
+
+foreach my $slavehost (@slave_host) {
+  my $state = get_slave_status($slavehost, $config->{'slave_port'}, $config->{'slave_user'}, $config->{'slave_pass'});
+
+  for my $atlas_port (@port) {
+        my $atlas_info = atlas_ends($config->{'atlas_host'}, $atlas_port, $config->{'atlas_user'}, $config->{'atlas_pass'}, $slavehost);
+        #set offline when slave has error but atlas is ok.
+        if ( $state eq 'ERR' and $atlas_info->{$atlas_port}->{'port'} + 0 == $atlas_port and $atlas_info->{$atlas_port}->{'state'} eq 'up' and $atlas_info->{$atlas_port}->{'type'} eq 'ro') {
+           atlas_setline('offline', $slavehost, $config->{'atlas_host'}, $atlas_port, $config->{'atlas_user'}, $config->{'atlas_pass'}, $atlas_info->{$atlas_port}->{'id'}) if $setline;
+        }
+
+        #set online when slave is ok but atlas is error. 
+        if ( $state eq 'OK' and $atlas_info->{$atlas_port}->{'port'} + 0 == $atlas_port and $atlas_info->{$atlas_port}->{'state'} eq 'offline' and $atlas_info->{$atlas_port}->{'type'} eq 'ro')   {
+           atlas_setline('online', $slavehost, $config->{'atlas_host'}, $atlas_port, $config->{'atlas_user'}, $config->{'atlas_pass'}, $atlas_info->{$atlas_port}->{'id'}) if $setline;
+        }
+  }
+}
 
 =pod
 
@@ -186,15 +200,15 @@ type: var:value
 Specifies slave and atlas source configuration:
   virtual ip address is recommonded.
   eg:
-     #slave host and atlas admin host info.
-      slave_host:10.0.23.205
-      slave_port:3306
-      slave_user:root
-      slave_pass:xxxxxx
-      atlas_host:10.0.23.201
-      atlas_port:5011, 5012, 5013
-      atlas_user:admin
-      atlas_pass:xxxxxx
+  #slave host and atlas admin host info. 
+   slave_host:172.30.0.15,172.30.0.16     #multi slave hosts, split with ','.
+   slave_port:3306                        #slave service port
+   slave_user:slave_user                  #slave user, which can detect slave lag info.
+   slave_pass:xxxxxx                      #slave_user password
+   atlas_host:172.30.0.18                 #atlas service ip address, virtual ip is recommended.
+   atlas_port:5012                        #atlas service port, one mysql_proxyd one port
+   atlas_user:admin                       #atlas user
+   atlas_pass:xxxxxxx                     #atlas user password
 
 =item --setline
 
@@ -212,6 +226,12 @@ type: integer
 
 Version of this script.
 
+=item --threshold
+
+type: integer
+
+set offline node if slave lag greater than threshold value, default 30s.
+
 =back
 
 =head1 SYSTEM REQUIREMENTS
@@ -220,9 +240,6 @@ DBI, DBD::mysql, Config::Auto, Getopt::Long
 
 
 =head1 BUGS
-
-Does not support mutiple slave nodes, you can instead use the folling command:
-for x in db1.conf db2.conf .. dbn.conf;do perl atlas_auto_setline.pl --conf=$x --verbose --setline
 
 =head1 SEE ALSO
 

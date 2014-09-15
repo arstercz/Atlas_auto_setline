@@ -13,30 +13,32 @@ a tool for automatic offline/online unusable slave node in Atlas open source sof
 
 
 db.conf文件配置(单实例下的多个库)举例,:
-#slave host and atlas admin host info.
-slave_host:172.30.0.15,172.30.0.16     #多台slave以','分隔
-slave_port:3306                        #slave 服务端口
-slave_user:slave_user                  #可以检测slave 延迟状态的用户
-slave_pass:xxxxxx                      #slave_user口令   
-atlas_host:172.30.0.18                 #atlas对外服务的ip, 建议是虚ip
-atlas_port:5012                        #atlas对外服务的端口, 一个atlas的mysql-proxyd占用一个端口, 如果起了多个, 以','分隔指定多个端口
-atlas_user:admin                       #atlas的账户
-atlas_pass:xxxxxxx                     #atlas账户的口令信息
+
+    #slave host and atlas admin host info.
+    slave_host:172.30.0.15,172.30.0.16     #多台slave以','分隔
+    slave_port:3306                        #slave 服务端口
+    slave_user:slave_user                  #可以检测slave 延迟状态的用户
+    slave_pass:xxxxxx                      #slave_user口令   
+    atlas_host:172.30.0.18                 #atlas对外服务的ip, 建议是虚ip
+    atlas_port:5012                        #atlas对外服务的端口, 一个atlas的mysql-proxyd占用一个端口, 如果起了多个, 以','分隔指定多个端口
+    atlas_user:admin                       #atlas的账户
+    atlas_pass:xxxxxxx                     #atlas账户的口令信息
 
 
 测试说明:
 关闭SQL_THREAD:
 =======================
-mysql> select * from backends;
-+-------------+-------------------+-------+------+
-| backend_ndx | address           | state | type |
-+-------------+-------------------+-------+------+
-|           1 | 172.30.0.14:3306 | up    | rw   |
-|           2 | 172.30.0.14:3306 | up    | ro   |
-|           3 | 172.30.0.15:3306 | up    | ro   |
-|           4 | 172.30.0.16:3306 | up    | ro   |
-+-------------+-------------------+-------+------+
-4 rows in set (0.00 sec)
+
+    mysql> select * from backends;
+    +-------------+-------------------+-------+------+
+    | backend_ndx | address           | state | type |
+    +-------------+-------------------+-------+------+
+    |           1 | 172.30.0.14:3306 | up    | rw   |
+    |           2 | 172.30.0.14:3306 | up    | ro   |
+    |           3 | 172.30.0.15:3306 | up    | ro   |
+    |           4 | 172.30.0.16:3306 | up    | ro   |
+    +-------------+-------------------+-------+------+
+    4 rows in set (0.00 sec)
 
 
 停止ip位16的slave的复制线程后(多个端口，多个offline操作):
@@ -68,6 +70,7 @@ atlas下线:
 
 
 ===================
+
 手工offline一个节点:
 
     mysql> set offline 4;         

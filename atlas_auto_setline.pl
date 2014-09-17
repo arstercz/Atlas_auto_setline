@@ -70,7 +70,7 @@ sub mysql_setup {
 
 
 sub get_slave_status {
-   my ($host, $port, $user,  $pass) = @_;
+   my ($host, $port, $user,  $pass, $threshold) = @_;
    my $cur_time = strftime( "%Y-%m-%d %H:%M:%S", localtime(time) );
 
    # slave status.
@@ -82,7 +82,7 @@ sub get_slave_status {
          $slave{$1} = $2;
    }
    print " +---$cur_time, $host, Slave_IO_Running: $slave{'Slave_IO_Running'}, Slave_SQL_Running: $slave{'Slave_SQL_Running'}, Seconds_Behind_Master: $slave{'Seconds_Behind_Master'}\n" if $verbose;
-   if ($slave{'Slave_IO_Running'} eq 'Yes' and $slave{'Slave_SQL_Running'} eq 'Yes' and $slave{'Seconds_Behind_Master'} + 0 < 30) {
+   if ($slave{'Slave_IO_Running'} eq 'Yes' and $slave{'Slave_SQL_Running'} eq 'Yes' and $slave{'Seconds_Behind_Master'} + 0 < $threshold) {
       return 'OK';
    } else {
       return 'ERR';
@@ -167,7 +167,7 @@ if (ref($host_ref) eq "ARRAY") {
 mysql_setup;
 
 foreach my $slavehost (@slave_host) {
-  my $state = get_slave_status($slavehost, $config->{'slave_port'}, $config->{'slave_user'}, $config->{'slave_pass'});
+  my $state = get_slave_status($slavehost, $config->{'slave_port'}, $config->{'slave_user'}, $config->{'slave_pass'}, $threshold);
 
   for my $atlas_port (@port) {
         my $atlas_info = atlas_ends($config->{'atlas_host'}, $atlas_port, $config->{'atlas_user'}, $config->{'atlas_pass'}, $slavehost);

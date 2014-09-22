@@ -10,6 +10,7 @@ a tool for automatic offline/online unusable slave node in Atlas open source sof
  - 不对master做改动，仅检测slave信息； 
  - 支持多个slave, 详见 perldoc atlas_auto_setline说明;
  - 多个atlas端口必须是同一实例下的;
+ - 新加无线循环, 默认每10s检测一次, 在上下线过程中忽略kill的INT和TERM两个信号;
 
 
 db.conf文件配置(单实例下的多个库)举例,:
@@ -24,6 +25,21 @@ db.conf文件配置(单实例下的多个库)举例,:
     atlas_user:admin                       #atlas的账户
     atlas_pass:xxxxxxx                     #atlas账户的口令信息
 
+
+可添加到任务计划循环检测, 如下:
+
+   #!/bin/bash
+
+   (
+    flock -x -n 200
+       if [[ $? -ne 0 ]]; then
+         echo "Failed acquiring lock"
+         exit 1
+       fi
+
+      perl atlas_auto_setline.pl --conf=db.conf --verbose --setline --interval=10 >>setline.log 2>&1
+
+    ) 200>/web/scripts/atlas_auto/atlas.lock
 
 测试说明:
 关闭SQL_THREAD:
@@ -104,4 +120,20 @@ atlas下线:
 
 上线成功:
 
+无限循环检测
+=================
 
+    [root@tovm scripts]# perl atlas_auto_setline.pl --conf=db.conf --verbose --setline --threshold=30 --interval=10
+     +---2014-09-22 16:22:42, 172.30.0.154, Slave_IO_Running: Yes, Slave_SQL_Running: Yes, Seconds_Behind_Master: 0
+     +---2014-09-22 16:22:42, 172.30.0.133, Slave_IO_Running: Yes, Slave_SQL_Running: Yes, Seconds_Behind_Master: 0
+     +---2014-09-22 16:22:52, 172.30.0.154, Slave_IO_Running: Yes, Slave_SQL_Running: Yes, Seconds_Behind_Master: 0
+     +---2014-09-22 16:22:52, 172.30.0.133, Slave_IO_Running: Yes, Slave_SQL_Running: Yes, Seconds_Behind_Master: 0
+     +---2014-09-22 16:23:02, 172.30.0.154, Slave_IO_Running: No, Slave_SQL_Running: No, Seconds_Behind_Master: NULL
+     +-- 2014-09-22 16:23:02 OK SET offline node 172.30.0.154:5012
+     +---2014-09-22 16:23:02, 172.30.0.133, Slave_IO_Running: Yes, Slave_SQL_Running: Yes, Seconds_Behind_Master: 0
+     +---2014-09-22 16:23:12, 172.30.0.154, Slave_IO_Running: Yes, Slave_SQL_Running: Yes, Seconds_Behind_Master: 0
+     +-- 2014-09-22 16:23:12 OK SET online node 172.30.0.154:5012
+     +---2014-09-22 16:23:12, 172.30.0.133, Slave_IO_Running: Yes, Slave_SQL_Running: Yes, Seconds_Behind_Master: 0
+     +---2014-09-22 16:23:22, 172.30.0.154, Slave_IO_Running: Yes, Slave_SQL_Running: Yes, Seconds_Behind_Master: 0
+     +---2014-09-22 16:23:22, 172.30.0.133, Slave_IO_Running: Yes, Slave_SQL_Running: Yes, Seconds_Behind_Master: 0
+     +---2014-09-22 16:23:32, 172.30.0.154, Slave_IO_Running: Yes, Slave_SQL_Running: Yes, Seconds_Behind_Master: 0

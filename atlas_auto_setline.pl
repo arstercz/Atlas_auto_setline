@@ -39,8 +39,9 @@ my $setline  = 0;
 my $verbose  = 0;
 my $version  = 0;
 my $threshold= 30;
+my $interval = 10;
 
-my $VER = '0.0.1';
+my $VER = '0.0.2';
 
 GetOptions(
    "conf=s"     => \$conf,
@@ -49,6 +50,7 @@ GetOptions(
    "verbose!"   => \$verbose,
    "version!"   => \$version,
    "threshold=i"=> \$threshold,
+   "interval=10"=> \$interval,
 );
 
 sub usage {
@@ -132,6 +134,15 @@ sub atlas_setline {
    }
 }
 
+#SIG{'INT'} and SIG{'TERM'} should be ignored when do set online/offline progress.
+sub catch_sig {
+    my $signame = shift;
+    local $SIG{$signame} = 'IGNORE' if $signame eq 'INT' or $signame eq 'TERM';
+    our $halt = 1;
+    print STDOUT "+-- signal $signame was ignored when in the online/offline progress.\n";
+    return $SIG{$signame};
+}
+
 if ($help) {
     usage($0); 
 }
@@ -166,21 +177,28 @@ if (ref($host_ref) eq "ARRAY") {
 
 mysql_setup;
 
-foreach my $slavehost (@slave_host) {
-  my $state = get_slave_status($slavehost, $config->{'slave_port'}, $config->{'slave_user'}, $config->{'slave_pass'}, $threshold);
+while(1) {
+    sleep($interval) if $interval;
+    foreach my $slavehost (@slave_host) {
+        my $state = get_slave_status($slavehost, $config->{'slave_port'}, $config->{'slave_user'}, $config->{'slave_pass'}, $threshold);
 
-  for my $atlas_port (@port) {
-        my $atlas_info = atlas_ends($config->{'atlas_host'}, $atlas_port, $config->{'atlas_user'}, $config->{'atlas_pass'}, $slavehost);
-        #set offline when slave has error but atlas is ok.
-        if ( $state eq 'ERR' and $atlas_info->{$atlas_port}->{'port'} + 0 == $atlas_port and $atlas_info->{$atlas_port}->{'state'} eq 'up' and $atlas_info->{$atlas_port}->{'type'} eq 'ro') {
-           atlas_setline('offline', $slavehost, $config->{'atlas_host'}, $atlas_port, $config->{'atlas_user'}, $config->{'atlas_pass'}, $atlas_info->{$atlas_port}->{'id'}) if $setline;
-        }
+        {
+            local $SIG{'INT'} = \&catch_sig;
+            local $SIG{'TERM'} = \&catch_sig;
+            for my $atlas_port (@port) {
+                my $atlas_info = atlas_ends($config->{'atlas_host'}, $atlas_port, $config->{'atlas_user'}, $config->{'atlas_pass'}, $slavehost);
+                #set offline when slave has error but atlas is ok.
+                if ( $state eq 'ERR' and $atlas_info->{$atlas_port}->{'port'} + 0 == $atlas_port and $atlas_info->{$atlas_port}->{'state'} eq 'up' and $atlas_info->{$atlas_port}->{'type'} eq 'ro') {
+                   atlas_setline('offline', $slavehost, $config->{'atlas_host'}, $atlas_port, $config->{'atlas_user'}, $config->{'atlas_pass'}, $atlas_info->{$atlas_port}->{'id'}) if $setline;
+                }
 
-        #set online when slave is ok but atlas is error. 
-        if ( $state eq 'OK' and $atlas_info->{$atlas_port}->{'port'} + 0 == $atlas_port and $atlas_info->{$atlas_port}->{'state'} eq 'offline' and $atlas_info->{$atlas_port}->{'type'} eq 'ro')   {
-           atlas_setline('online', $slavehost, $config->{'atlas_host'}, $atlas_port, $config->{'atlas_user'}, $config->{'atlas_pass'}, $atlas_info->{$atlas_port}->{'id'}) if $setline;
+                #set online when slave is ok but atlas is error. 
+                if ( $state eq 'OK' and $atlas_info->{$atlas_port}->{'port'} + 0 == $atlas_port and $atlas_info->{$atlas_port}->{'state'} eq 'offline' and $atlas_info->{$atlas_port}->{'type'} eq 'ro')   {
+                   atlas_setline('online', $slavehost, $config->{'atlas_host'}, $atlas_port, $config->{'atlas_user'}, $config->{'atlas_pass'}, $atlas_info->{$atlas_port}->{'id'}) if $setline;
+                }
+            }
         }
-  }
+    }
 }
 
 =pod

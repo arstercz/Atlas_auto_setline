@@ -250,6 +250,12 @@ type: integer
 
 set offline node if slave lag greater than threshold value, default 30s.
 
+=item --interval
+
+type: integer
+
+check every interval seconds.
+
 =back
 
 =head1 SYSTEM REQUIREMENTS

@@ -50,7 +50,7 @@ GetOptions(
    "verbose!"   => \$verbose,
    "version!"   => \$version,
    "threshold=i"=> \$threshold,
-   "interval=10"=> \$interval,
+   "interval=i" => \$interval,
 );
 
 sub usage {

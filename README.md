@@ -10,7 +10,7 @@ a tool for automatic offline/online unusable slave node in Atlas open source sof
  - 不对master做改动，仅检测slave信息； 
  - 支持多个slave, 详见 perldoc atlas_auto_setline说明;
  - 多个atlas端口必须是同一实例下的;
- - 新加无线循环, 默认每10s检测一次, 在上下线过程中忽略kill的INT和TERM两个信号;
+ - 新加循环检测, 默认每10s检测一次, 在上下线过程中忽略kill的INT和TERM两个信号;
 
 
 db.conf文件配置(单实例下的多个库)举例,:

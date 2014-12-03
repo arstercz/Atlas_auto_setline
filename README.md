@@ -29,6 +29,7 @@ db.conf文件配置(单实例下的多个库)举例,:
 
 可添加到任务计划循环检测, 如下:
 
+<pre>
    #!/bin/bash
    (
       flock -x -n 200
@@ -38,10 +39,11 @@ db.conf文件配置(单实例下的多个库)举例,:
       fi
       perl atlas_auto_setline.pl --conf=db.conf --verbose --setline --interval=10 >>setline.log 2>&1
     ) 200>/web/scripts/atlas_auto/atlas.lock
-
+</pre>
 测试说明:
-关闭SQL_THREAD:
-==============
+=========
+
+##关闭SQL_THREAD:
 
     mysql> select * from backends;
     +-------------+-------------------+-------+------+
@@ -76,7 +78,7 @@ atlas下线:
      4 rows in set (0.00 sec)
 
 
-启动SQL_THREAD:
+##启动SQL_THREAD:
 
     [root@tovm scripts]# perl atlas_auto_setline.pl --conf=db.conf --verbose --setline --threshold=30
      +---2014-04-15 11:54:01, 172.30.0.15, Slave_IO_Running: Yes, Slave_SQL_Running: Yes, Seconds_Behind_Master: 0
@@ -109,7 +111,7 @@ atlas下线:
      +-------------+-------------------+-------+------+
      4 rows in set (0.00 sec)
 
-运行脚本使其上线:
+##运行脚本使其上线:
 
     [root@tovm scripts]# perl atlas_auto_setline.pl --conf=db.conf --verbose --setline --threshold=30
      +---2014-04-15 11:56:01, 172.30.0.15, Slave_IO_Running: Yes, Slave_SQL_Running: Yes, Seconds_Behind_Master: 0

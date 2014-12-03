@@ -5,13 +5,14 @@ a tool for automatic offline/online unusable slave node in Atlas open source sof
 
 此脚本配合360 Atlas中间件的使用， 检测slave状况(延迟或slavethread错误)，自动上线或下线存在于Atlas admin接口里的slave节点；
 
- 
 
  - 不对master做改动，仅检测slave信息； 
  - 支持多个slave, 详见 perldoc atlas_auto_setline说明;
  - 多个atlas端口必须是同一实例下的;
  - 新加循环检测, 默认每10s检测一次, 在上下线过程中忽略kill的INT和TERM两个信号;
 
+
+需要的依赖见 SYSTEM REQUIREMENTS 说明(perldoc atlas_auto_setline.pl)
 
 db.conf文件配置(单实例下的多个库)举例,:
 
@@ -30,14 +31,12 @@ db.conf文件配置(单实例下的多个库)举例,:
 
    #!/bin/bash
    (
-    flock -x -n 200
-       if [[ $? -ne 0 ]]; then
-         echo "Failed acquiring lock"
-         exit 1
-       fi
-
+      flock -x -n 200
+      if [[ $? -ne 0 ]]; then
+        echo "Failed acquiring lock"
+        exit 1
+      fi
       perl atlas_auto_setline.pl --conf=db.conf --verbose --setline --interval=10 >>setline.log 2>&1
-
     ) 200>/web/scripts/atlas_auto/atlas.lock
 
 测试说明:

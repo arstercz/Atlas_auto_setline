@@ -129,8 +129,10 @@ sub atlas_setline {
    };
    if ($@) {
      print " +-- $cur_time SET $tag ERR :$@\n"
+     send_msg("$cur_time SET $tag ERR");
    } else {
      print " +-- $cur_time OK SET $tag node $slavehost:$port\n" ;
+     send_msg("$cur_time OK SET $tag node $slavehost:$port");
    }
 }
 
@@ -156,6 +158,7 @@ $conf = "./$conf" if $conf && $conf =~ /^[^\/]/;
 my $config   = Config::Auto::parse("$conf");
 my $port_ref = $config->{'atlas_port'};
 my $host_ref = $config->{'slave_host'};
+my $mail_ref = $config->{'mail'};
 
 my @port;
 if (ref($port_ref) eq "ARRAY") {
@@ -173,6 +176,27 @@ if (ref($host_ref) eq "ARRAY") {
    }
 } else {
      push @slave_host, $host_ref;
+}
+
+my @mail;
+if (ref($mail_ref) eq "ARRAY") {
+    foreach my $recv (@$mail_ref) {
+        push @mail, $recv;
+    }
+} else {
+    push @mail, $mail_ref;
+}
+
+sub send_msg {
+    my $data = join("\n", map { $_ = '+-- ' . $_ } @_);
+    my $to = join( ' ', @mail);
+    eval {
+        `echo "$data" | /bin/mail -r "atlas\@setline.com" -s "atlas auto setline" $to`;
+    };  
+
+    if ( $@ ) { 
+       warn "error send: $@";
+    }   
 }
 
 mysql_setup;

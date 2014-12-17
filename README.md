@@ -25,6 +25,7 @@ db.conf文件配置(单实例下的多个库)举例,:
     atlas_port:5012                        #atlas对外服务的端口, 一个atlas的mysql-proxyd占用一个端口, 如果起了多个, 以','分隔指定多个端口
     atlas_user:admin                       #atlas的账户
     atlas_pass:xxxxxxx                     #atlas账户的口令信息
+    mail:chenzhe07@gmail.com
 
 
 可添加到任务计划循环检测, 如下:

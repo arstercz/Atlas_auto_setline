@@ -128,7 +128,7 @@ sub atlas_setline {
      }
    };
    if ($@) {
-     print " +-- $cur_time SET $tag ERR :$@\n"
+     print " +-- $cur_time SET $tag ERR :$@\n";
      send_msg("$cur_time SET $tag ERR");
    } else {
      print " +-- $cur_time OK SET $tag node $slavehost:$port\n" ;

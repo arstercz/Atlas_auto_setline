@@ -77,17 +77,29 @@ sub get_slave_status {
 
    # slave status.
    my %slave;
-   my @slave_info = `mysql -h $host -P $port -u$user -p$pass -Bse 'show slave status\\G'`;
-   foreach my $line (@slave_info) {
-         next if $line =~ /1\. row/;
-         $line =~ /([a-zA-Z_]*):\s(.*)/;
-         $slave{$1} = $2;
-   }
-   print " +---$cur_time, $host, Slave_IO_Running: $slave{'Slave_IO_Running'}, Slave_SQL_Running: $slave{'Slave_SQL_Running'}, Seconds_Behind_Master: $slave{'Seconds_Behind_Master'}\n" if $verbose;
-   if ($slave{'Slave_IO_Running'} eq 'Yes' and $slave{'Slave_SQL_Running'} eq 'Yes' and $slave{'Seconds_Behind_Master'} + 0 < $threshold) {
-      return 'OK';
+   my @slave_info;
+
+   eval {
+       @slave_info = `mysql -h $host -P $port -u$user -p$pass -Bse 'show slave status\\G'`;
+   };
+   if ($@ or not grep { /Slave/i} @slave_info) {
+       print " +-- error in get slave $slave:$port info. $@\n";
+       return 'ERR';
    } else {
-      return 'ERR';
+       foreach my $line (@slave_info) {
+             next if $line =~ /1\. row/;
+             $line =~ /([a-zA-Z_]*):\s(.*)/;
+             $slave{$1} = $2;
+       }
+       print " +---$cur_time, $host, Slave_IO_Running: " . $slave{'Slave_IO_Running'} . 
+             ", Slave_SQL_Running: " . $slave{'Slave_SQL_Running'} .
+             ", Seconds_Behind_Master: " . $slave{'Seconds_Behind_Master'} . 
+             "\n" if $verbose;
+       if ($slave{'Slave_IO_Running'} eq 'Yes' and $slave{'Slave_SQL_Running'} eq 'Yes' and $slave{'Seconds_Behind_Master'} + 0 < $threshold) {
+          return 'OK';
+       } else {
+          return 'ERR';
+       }
    }
 }
 
@@ -102,17 +114,26 @@ sub get_slave_status {
 #+-------------+-------------------+-------+------+
 sub atlas_ends {
   my ($host, $port, $user,  $pass, $slave_host) = @_;
-  my @atlas_state = `mysql -h $host -P $port -u$user -p$pass -Bse 'select * from backends'`;
-  my %admin_state;
-  foreach my $line (@atlas_state) {
-      next if $line !~ /$slave_host/;
-      $line =~ /(\d+)\s+(.+)\s+(.+)\s+(.+)/;
-      $admin_state{$port}{'id'} = $1;
-      $admin_state{$port}{'port'} = $port;
-      $admin_state{$port}{'state'} = $3;
-      $admin_state{$port}{'type'}  = $4;
+  my @atlas_state;
+  eval {
+      @atlas_state = `mysql -h $host -P $port -u$user -p$pass -Bse 'select * from backends'`;
+  };
+
+  if($@ or not grep { /ro/i } @atlas_state) {
+    print "+-- connect to atlas $host:$port error: $@\n";
+    return;
+  } else {
+    my %admin_state;
+    foreach my $line (@atlas_state) {
+        next if $line !~ /$slave_host/;
+        $line =~ /(\d+)\s+(.+)\s+(.+)\s+(.+)/;
+        $admin_state{$port}{'id'} = $1;
+        $admin_state{$port}{'port'} = $port;
+        $admin_state{$port}{'state'} = $3;
+        $admin_state{$port}{'type'}  = $4;
+    }
+    return \%admin_state;
   }
-  return \%admin_state;
 }
 
 sub atlas_setline {
@@ -211,15 +232,17 @@ while(1) {
             local $SIG{'TERM'} = \&catch_sig;
             for my $atlas_port (@port) {
                 my $atlas_info = atlas_ends($config->{'atlas_host'}, $atlas_port, $config->{'atlas_user'}, $config->{'atlas_pass'}, $slavehost);
-                #set offline when slave has error but atlas is ok.
-                if ( $state eq 'ERR' and $atlas_info->{$atlas_port}->{'port'} + 0 == $atlas_port and $atlas_info->{$atlas_port}->{'state'} eq 'up' and $atlas_info->{$atlas_port}->{'type'} eq 'ro') {
-                   atlas_setline('offline', $slavehost, $config->{'atlas_host'}, $atlas_port, $config->{'atlas_user'}, $config->{'atlas_pass'}, $atlas_info->{$atlas_port}->{'id'}) if $setline;
-                }
+                if ( $atlas_info ) {
+                    #set offline when slave has error but atlas is ok.
+                    if ( $state eq 'ERR' and $atlas_info->{$atlas_port}->{'port'} + 0 == $atlas_port and $atlas_info->{$atlas_port}->{'state'} eq 'up' and $atlas_info->{$atlas_port}->{'type'} eq 'ro') {
+                       atlas_setline('offline', $slavehost, $config->{'atlas_host'}, $atlas_port, $config->{'atlas_user'}, $config->{'atlas_pass'}, $atlas_info->{$atlas_port}->{'id'}) if $setline;
+                    }
 
-                #set online when slave is ok but atlas is error. 
-                if ( $state eq 'OK' and $atlas_info->{$atlas_port}->{'port'} + 0 == $atlas_port and $atlas_info->{$atlas_port}->{'state'} eq 'offline' and $atlas_info->{$atlas_port}->{'type'} eq 'ro')   {
-                   atlas_setline('online', $slavehost, $config->{'atlas_host'}, $atlas_port, $config->{'atlas_user'}, $config->{'atlas_pass'}, $atlas_info->{$atlas_port}->{'id'}) if $setline;
-                }
+                    #set online when slave is ok but atlas is error. 
+                    if ( $state eq 'OK' and $atlas_info->{$atlas_port}->{'port'} + 0 == $atlas_port and $atlas_info->{$atlas_port}->{'state'} eq 'offline' and $atlas_info->{$atlas_port}->{'type'} eq 'ro')   {
+                       atlas_setline('online', $slavehost, $config->{'atlas_host'}, $atlas_port, $config->{'atlas_user'}, $config->{'atlas_pass'}, $atlas_info->{$atlas_port}->{'id'}) if $setline;
+                    }
+               }
             }
         }
     }

@@ -22,11 +22,12 @@ db.conf文件配置(单实例下的多个库)举例,:
     slave_user:slave_user                  #可以检测slave 延迟状态的用户
     slave_pass:xxxxxx                      #slave_user口令   
     atlas_host:172.30.0.18                 #atlas对外服务的ip, 建议是虚ip
-    atlas_port:5012                        #atlas对外服务的端口, 一个atlas的mysql-proxyd占用一个端口, 如果起了多个, 以','分隔指定多个端口
-    atlas_user:admin                       #atlas的账户
-    atlas_pass:xxxxxxx                     #atlas账户的口令信息
+    atlas_port:5012                        #atlas对外服务的管理端口, 一个atlas的mysql-proxyd占用一个端口, 如果起了多个, 以','分隔指定多个端口
+    atlas_user:admin                       #atlas的管理账户
+    atlas_pass:xxxxxxx                     #atlas管理账户的口令信息
     mail:chenzhe07@gmail.com
 
+atlas_port和atlas_user和atlas_pass三个参数应该指定atlas的管理端口和管理的用户信息， 用于读取 atlas 的后端状态backend.
 
 可添加到任务计划循环检测, 如下:
 

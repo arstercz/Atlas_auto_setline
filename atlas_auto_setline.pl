@@ -83,7 +83,7 @@ sub get_slave_status {
        @slave_info = `mysql -h $host -P $port -u$user -p$pass -Bse 'show slave status\\G'`;
    };
    if ($@ or not grep { /Slave/i} @slave_info) {
-       print " +-- error in get slave $slave:$port info. $@\n";
+       print " +-- error in get slave $host:$port info. $@\n";
        return 'ERR';
    } else {
        foreach my $line (@slave_info) {

@@ -122,7 +122,7 @@ atlas下线:
 
 上线成功:
 
-无限循环检测
+循环检测
 =================
 
     [root@tovm scripts]# perl atlas_auto_setline.pl --conf=db.conf --verbose --setline --threshold=30 --interval=10
@@ -139,3 +139,8 @@ atlas下线:
      +---2014-09-22 16:23:22, 172.30.0.154, Slave_IO_Running: Yes, Slave_SQL_Running: Yes, Seconds_Behind_Master: 0
      +---2014-09-22 16:23:22, 172.30.0.133, Slave_IO_Running: Yes, Slave_SQL_Running: Yes, Seconds_Behind_Master: 0
      +---2014-09-22 16:23:32, 172.30.0.154, Slave_IO_Running: Yes, Slave_SQL_Running: Yes, Seconds_Behind_Master: 0
+
+说明
+==============
+
+MySQL Server 版本为 5.6, 运行脚本的时候会有安全提示 ```Warning: Using a password on the command line interface can be insecure.```, 这个错误信息可以忽略, 不影响脚本的执行. perl DBI驱动不兼容atlas的管理端口, 只能通过 mysql -h 的方式调用取到结果, 5.6 的警告信息可以忽略, 也可以在my.cnf 配置里[client]设置密码信息, 然后脚本里去掉 -p$pass这部分就可以避免出现错误信息, 或使用 2>/dev/null 将错误重定向.

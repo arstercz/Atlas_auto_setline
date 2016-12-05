@@ -116,7 +116,16 @@ sub atlas_ends {
   my ($host, $port, $user,  $pass, $slave_host) = @_;
   my @atlas_state;
   eval {
-      @atlas_state = `mysql -h $host -P $port -u$user -p$pass -Bse 'select * from backends'`;
+      @slave_info = `printf \\
+          "%s\n" \\
+          "\[client\]" \\
+          "user=$user" \\
+          "password=$pass" \\
+          "host=$host" \\
+          "port=$port" \\
+          "database=information_schema" \\
+          | mysql --defaults-file=/dev/stdin -Bse 'show slave status\\G'
+      `;
   };
 
   if($@ or not grep { /ro/i } @atlas_state) {

@@ -144,3 +144,4 @@ atlas下线:
 ==============
 
 MySQL Server 版本为 5.6, 运行脚本的时候会有安全提示 ```Warning: Using a password on the command line interface can be insecure.```, 这个错误信息可以忽略, 不影响脚本的执行. perl DBI驱动不兼容atlas的管理端口, 只能通过 mysql -h 的方式调用取到结果, 5.6 的警告信息可以忽略, 也可以在my.cnf 配置里[client]设置密码信息, 然后脚本里去掉 -p$pass这部分就可以避免出现错误信息, 或使用 2>/dev/null 将错误重定向.
+增加隐藏连接 MySQL 的密码信息功能, 参考文章 http://highdb.com/%E5%A6%82%E4%BD%95%E5%AE%89%E5%85%A8%E7%9A%84%E4%BD%BF%E7%94%A8-bash-%E6%93%8D%E4%BD%9C-mysql/ 

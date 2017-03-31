@@ -80,7 +80,16 @@ sub get_slave_status {
    my @slave_info;
 
    eval {
-       @slave_info = `mysql -h $host -P $port -u$user -p$pass -Bse 'show slave status\\G'`;
+       @slave_info = `printf \\
+           "%s\n" \\
+           "\[client\]" \\
+           "user=$user" \\
+           "password=$pass" \\
+           "host=$host" \\
+           "port=$port" \\
+           "database=information_schema" \\
+           | mysql --defaults-file=/dev/stdin -Bse 'show slave status\\G'
+       `;
    };
    if ($@ or not grep { /Slave/i} @slave_info) {
        print " +-- error in get slave $host:$port info. $@\n";
@@ -116,16 +125,7 @@ sub atlas_ends {
   my ($host, $port, $user,  $pass, $slave_host) = @_;
   my @atlas_state;
   eval {
-      @slave_info = `printf \\
-          "%s\n" \\
-          "\[client\]" \\
-          "user=$user" \\
-          "password=$pass" \\
-          "host=$host" \\
-          "port=$port" \\
-          "database=information_schema" \\
-          | mysql --defaults-file=/dev/stdin -Bse 'show slave status\\G'
-      `;
+    @atlas_state = `mysql -h $host -P $port -u$user -p$pass -Bse 'select * from backends'`;
   };
 
   if($@ or not grep { /ro/i } @atlas_state) {

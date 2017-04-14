@@ -146,7 +146,7 @@ sub atlas_ends {
 }
 
 sub atlas_setline {
-   my ($tag,$slavehost, $atlashost, $port, $user, $pass, $id) = @_;
+   my ($tag,$slave_msg, $atlashost, $port, $user, $pass, $id) = @_;
    my $cur_time    = strftime( "%Y-%m-%d %H:%M:%S", localtime(time) );
    eval {
      if ($tag eq 'offline') {
@@ -158,11 +158,11 @@ sub atlas_setline {
      }
    };
    if ($@) {
-     print " +-- $cur_time SET $tag ERR :$@\n";
-     send_msg("$cur_time SET $tag ERR");
+     print " +-- $cur_time SET $tag - $slave_msg ERR :$@\n";
+     send_msg("$cur_time SET $tag - $slave_msg ERR");
    } else {
-     print " +-- $cur_time OK SET $tag node $slavehost:$port\n" ;
-     send_msg("$cur_time OK SET $tag node $slavehost:$port");
+     print " +-- $cur_time OK SET $tag node $slave_msg\n" ;
+     send_msg("$cur_time OK SET $tag node $slave_msg");
    }
 }
 
@@ -237,6 +237,7 @@ while(1) {
         my $state = get_slave_status($slavehost, $config->{'slave_port'}, 
                     $config->{'slave_user'}, $config->{'slave_pass'}, $threshold);
 
+        my $slave_msg = $slavehost . ":" . $config->{'slave_port'};
         {
             local $SIG{'INT'} = \&catch_sig;
             local $SIG{'TERM'} = \&catch_sig;
@@ -249,7 +250,7 @@ while(1) {
                          and $atlas_info->{$atlas_port}->{'state'} eq 'up' 
                          and $atlas_info->{$atlas_port}->{'type'} eq 'ro') {
 
-                       atlas_setline('offline', $slavehost, $config->{'atlas_host'}, $atlas_port, 
+                       atlas_setline('offline', $slave_msg, $config->{'atlas_host'}, $atlas_port, 
                                      $config->{'atlas_user'}, $config->{'atlas_pass'}, 
                                      $atlas_info->{$atlas_port}->{'id'}) if $setline;
                     }
@@ -259,7 +260,7 @@ while(1) {
                          and $atlas_info->{$atlas_port}->{'state'} eq 'offline'
                          and $atlas_info->{$atlas_port}->{'type'} eq 'ro')   {
 
-                       atlas_setline('online', $slavehost, $config->{'atlas_host'}, $atlas_port, 
+                       atlas_setline('online', $slave_msg, $config->{'atlas_host'}, $atlas_port, 
                                      $config->{'atlas_user'}, $config->{'atlas_pass'}, 
                                      $atlas_info->{$atlas_port}->{'id'}) if $setline;
                     }
